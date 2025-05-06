@@ -11,3 +11,8 @@ logging.level.root=INFO
 logging.level.com.taskexecutor=DEBUG
 logging.level.org.springframework.web=INFO
 logging.level.org.springframework.security=INFO
+
+# AWS SQS Configuration
+aws.sqs.high-priority-queue=
+aws.sqs.normal-priority-queue=
+aws.sqs.low-priority-queue=

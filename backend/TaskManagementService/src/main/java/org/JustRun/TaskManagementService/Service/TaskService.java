@@ -2,6 +2,7 @@ package org.JustRun.TaskManagementService.Service;
 
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.JustRun.TaskManagementService.Repository.TaskRepository;
 import org.JustRun.TaskManagementService.dto.TaskRequest;
 import org.JustRun.TaskManagementService.dto.TaskResponse;
@@ -19,11 +20,13 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TaskService {
 
     private final TaskRepository taskRepository;
+    private final QueueService queueService;
 
     private Task mapRequestToTask(TaskRequest request) {
         return Task.builder()
@@ -35,7 +38,7 @@ public class TaskService {
                 .headers(request.getHeaders())
                 .body(request.getBody())
                 .cronExpression(request.getCronExpression())
-                .priority(TaskPriority.valueOf(request.getPriority()))
+                .priority(request.getPriority() != null ? TaskPriority.valueOf(request.getPriority()) : TaskPriority.NORMAL)
                 .maxRetries(request.getMaxRetries())
                 .retryDelay(request.getRetryDelay())
                 .exponentialBackoff(request.getExponentialBackoff())
@@ -78,8 +81,12 @@ public class TaskService {
         taskRepository.save(savedTask);
 
 
-        // Schedule the task
-//        schedulerService.scheduleTask(savedTask);
+//        enqueue task after save
+        try{
+            queueService.enqueueTask(savedTask);
+        }catch (Exception e){
+            log.error("Failed to enqueue task: {}", savedTask.getId(), e);
+        }
 
         return savedTask;
     }
