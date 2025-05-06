@@ -12,10 +12,14 @@ import org.JustRun.TaskManagementService.model.Task;
 import org.JustRun.TaskManagementService.model.TaskChain;
 import org.JustRun.TaskManagementService.model.TaskPriority;
 import org.JustRun.TaskManagementService.model.User;
+import org.springframework.scheduling.support.CronTrigger;
+import org.springframework.scheduling.support.SimpleTriggerContext;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -26,7 +30,7 @@ import java.util.stream.Collectors;
 public class TaskService {
 
     private final TaskRepository taskRepository;
-    private final QueueService queueService;
+//    private final QueueService queueService;
 
     private Task mapRequestToTask(TaskRequest request) {
         return Task.builder()
@@ -55,6 +59,30 @@ public class TaskService {
         task.setExecutionCount(0);
         task.setFailureCount(0);
 
+        task.setTaskType("SCHEDULED");
+
+        if (task.getCronExpression() != null && !task.getCronExpression().isEmpty()) {
+            CronTrigger cronTrigger = new CronTrigger(task.getCronExpression());
+            LocalDateTime now = LocalDateTime.now();
+            Date currentTime = Date.from(now.atZone(ZoneId.systemDefault()).toInstant());
+            Date nextExecutionDate = cronTrigger.nextExecutionTime(new SimpleTriggerContext(currentTime, null, null));
+
+//            Date nextExecutionDate = cronTrigger.nextExecutionTime(new SimpleTriggerContext());
+            if (nextExecutionDate != null) {
+                LocalDateTime nextExecution = nextExecutionDate.toInstant()
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDateTime();
+                if (now.getSecond() != 0) {
+                    // If the current second isn't 0, adjust nextExecution by adding the seconds
+                    nextExecution = nextExecution.plusSeconds(now.getSecond());
+                }
+
+                task.setNextExecutionTime(nextExecution);
+            } else {
+                log.warn("Unable to compute next execution time for task {} with cron expression: {}", task.getId(), task.getCronExpression());
+            }
+        }
+
         // Process chains if present
         if (request.getChains() != null && !request.getChains().isEmpty()) {
             List<TaskChain> chains = new ArrayList<>();
@@ -82,11 +110,11 @@ public class TaskService {
 
 
 //        enqueue task after save
-        try{
-            queueService.enqueueTask(savedTask);
-        }catch (Exception e){
-            log.error("Failed to enqueue task: {}", savedTask.getId(), e);
-        }
+//        try{
+//            queueService.enqueueTask(savedTask);
+//        }catch (Exception e){
+//            log.error("Failed to enqueue task: {}", savedTask.getId(), e);
+//        }
 
         return savedTask;
     }

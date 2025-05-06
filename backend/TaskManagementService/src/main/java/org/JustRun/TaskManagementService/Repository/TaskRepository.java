@@ -20,7 +20,10 @@ public class TaskRepository {
 
     private final DynamoDbClient dynamoDbClient;
     private static final String TABLE_NAME = "tasks";
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+//    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+//    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSS");
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public Task save(Task task) {
@@ -42,6 +45,15 @@ public class TaskRepository {
         item.put("status", AttributeValue.builder().s(task.getStatus()).build());
         item.put("createdAt", AttributeValue.builder().s(task.getCreatedAt().format(DATE_FORMATTER)).build());
         item.put("updatedAt", AttributeValue.builder().s(task.getUpdatedAt().format(DATE_FORMATTER)).build());
+
+        String nextExecutionTime = (task.getNextExecutionTime() != null)
+                ? task.getNextExecutionTime().format(DATE_FORMATTER)
+                : "2000-01-01T00:00:00";  // obsolete value to say , I'm invalid
+        item.put("nextExecutionTime", AttributeValue.builder().s(nextExecutionTime).build());
+
+
+        String taskType = task.getTaskType() != null ? task.getTaskType() : "SCHEDULED";
+        item.put("taskType", AttributeValue.builder().s(taskType).build());
 
         if (task.getDescription() != null) {
             item.put("description", AttributeValue.builder().s(task.getDescription()).build());
@@ -137,7 +149,7 @@ public class TaskRepository {
 
     public Optional<Task> findById(String userId,String id) {
         Map<String, AttributeValue> key = new HashMap<>();
-        key.put("userId", AttributeValue.builder().s(userId).build());
+//        key.put("userId", AttributeValue.builder().s(userId).build());
         key.put("id", AttributeValue.builder().s(id).build());
 
         GetItemRequest request = GetItemRequest.builder()
@@ -156,7 +168,7 @@ public class TaskRepository {
 
     public void delete(String userId,String id) {
         Map<String, AttributeValue> key = new HashMap<>();
-        key.put("userId", AttributeValue.builder().s(userId).build());
+//        key.put("userId", AttributeValue.builder().s(userId).build());
         key.put("id", AttributeValue.builder().s(id).build());
 
         DeleteItemRequest request = DeleteItemRequest.builder()
