@@ -1,0 +1,13 @@
+# Server Configuration
+server.port=8081
+
+# AWS Configuration
+aws.accessKey=
+aws.secretKey=
+aws.region=
+
+# Logging Configuration
+logging.level.root=INFO
+logging.level.com.taskexecutor=DEBUG
+logging.level.org.springframework.web=INFO
+logging.level.org.springframework.security=INFO
