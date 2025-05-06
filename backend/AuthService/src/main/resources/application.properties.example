@@ -1,0 +1,20 @@
+# Server Configuration
+server.port=
+
+# JWT Configuration
+jwt.secret=
+jwt.expiration=
+
+# AWS Configuration
+aws.accessKey=
+aws.secretKey=
+aws.region=
+
+# Logging Configuration
+logging.level.root=INFO
+logging.level.com.taskexecutor=DEBUG
+logging.level.org.springframework.web=INFO
+logging.level.org.springframework.security=INFO
+
+spring.security.user.name=
+spring.security.user.password=
