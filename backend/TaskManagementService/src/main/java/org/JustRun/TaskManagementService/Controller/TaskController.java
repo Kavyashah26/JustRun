@@ -10,10 +10,10 @@ import org.JustRun.TaskManagementService.model.Task;
 import org.JustRun.TaskManagementService.model.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/tasks")
@@ -29,6 +29,26 @@ public class TaskController {
         return ResponseEntity.ok(mapToTaskResponse(task));
     }
 
+    @GetMapping
+    public ResponseEntity<List<TaskResponse>> getUserTasks(@AuthenticationPrincipal User user) {
+        List<Task> tasks = taskService.getUserTasks(user.getId());
+        List<TaskResponse> response = tasks.stream()
+                .map(this::mapToTaskResponse)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<TaskResponse> getTask(@PathVariable String id, @AuthenticationPrincipal User user) {
+        Task task = taskService.getTask(id, user.getId());
+        return ResponseEntity.ok(mapToTaskResponse(task));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteTask(@PathVariable String id, @AuthenticationPrincipal User user) {
+        taskService.deleteTask(id, user.getId());
+        return ResponseEntity.noContent().build();
+    }
     private TaskResponse mapToTaskResponse(Task task) {
         return TaskResponse.builder()
                 .id(task.getId())

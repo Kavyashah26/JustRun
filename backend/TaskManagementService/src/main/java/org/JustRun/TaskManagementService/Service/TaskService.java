@@ -5,6 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.JustRun.TaskManagementService.Repository.TaskRepository;
 import org.JustRun.TaskManagementService.dto.TaskRequest;
 import org.JustRun.TaskManagementService.dto.TaskResponse;
+import org.JustRun.TaskManagementService.exceptions.ResourceNotFoundException;
+import org.JustRun.TaskManagementService.exceptions.UnauthorizedException;
 import org.JustRun.TaskManagementService.model.Task;
 import org.JustRun.TaskManagementService.model.TaskChain;
 import org.JustRun.TaskManagementService.model.TaskPriority;
@@ -80,6 +82,28 @@ public class TaskService {
 //        schedulerService.scheduleTask(savedTask);
 
         return savedTask;
+    }
+
+    public List<Task> getUserTasks(String userId) {
+        return taskRepository.findByUserId(userId);
+    }
+
+    public Task getTask(String id, String userId) {
+        Task task = taskRepository.findById(userId,id)
+                .orElseThrow(() -> new ResourceNotFoundException("Task", "id", id));
+
+        if (!task.getUserId().equals(userId)) {
+            throw new UnauthorizedException("You don't have permission to access this task");
+        }
+
+        return task;
+    }
+
+    public void deleteTask(String id, String userId) {
+        Task task = getTask(id, userId);
+
+        // Delete the task
+        taskRepository.delete(userId,id);
     }
 
 }

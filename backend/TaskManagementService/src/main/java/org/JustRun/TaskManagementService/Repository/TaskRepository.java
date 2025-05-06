@@ -118,6 +118,55 @@ public class TaskRepository {
         return task;
     }
 
+    public List<Task> findByUserId(String userId) {
+        Map<String, AttributeValue> expressionValues = new HashMap<>();
+        expressionValues.put(":userId", AttributeValue.builder().s(userId).build());
+
+        ScanRequest request = ScanRequest.builder()
+                .tableName(TABLE_NAME)
+                .filterExpression("userId = :userId")
+                .expressionAttributeValues(expressionValues)
+                .build();
+
+        ScanResponse response = dynamoDbClient.scan(request);
+
+        return response.items().stream()
+                .map(this::mapToTask)
+                .collect(Collectors.toList());
+    }
+
+    public Optional<Task> findById(String userId,String id) {
+        Map<String, AttributeValue> key = new HashMap<>();
+        key.put("userId", AttributeValue.builder().s(userId).build());
+        key.put("id", AttributeValue.builder().s(id).build());
+
+        GetItemRequest request = GetItemRequest.builder()
+                .tableName(TABLE_NAME)
+                .key(key)
+                .build();
+
+        GetItemResponse response = dynamoDbClient.getItem(request);
+
+        if (!response.hasItem()) {
+            return Optional.empty();
+        }
+
+        return Optional.of(mapToTask(response.item()));
+    }
+
+    public void delete(String userId,String id) {
+        Map<String, AttributeValue> key = new HashMap<>();
+        key.put("userId", AttributeValue.builder().s(userId).build());
+        key.put("id", AttributeValue.builder().s(id).build());
+
+        DeleteItemRequest request = DeleteItemRequest.builder()
+                .tableName(TABLE_NAME)
+                .key(key)
+                .build();
+
+        dynamoDbClient.deleteItem(request);
+    }
+
     private Task mapToTask(Map<String, AttributeValue> item) {
         Task.TaskBuilder builder = Task.builder()
                 .id(item.get("id").s())
