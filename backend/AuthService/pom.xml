@@ -82,4 +82,15 @@
     </dependency>
 </dependencies>
 
+    <build>
+        <plugins>
+            <!-- Spring Boot plugin to build executable jar -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+
 </project>
