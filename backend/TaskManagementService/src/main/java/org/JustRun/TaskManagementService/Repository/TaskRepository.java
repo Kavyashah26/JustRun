@@ -2,6 +2,7 @@ package org.JustRun.TaskManagementService.Repository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.JustRun.TaskManagementService.model.Task;
 import org.JustRun.TaskManagementService.model.TaskChain;
 import org.JustRun.TaskManagementService.model.TaskPriority;
@@ -14,6 +15,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 public class TaskRepository {
@@ -230,6 +232,12 @@ public class TaskRepository {
         if (item.containsKey("failureCount")) {
             builder.failureCount(Integer.parseInt(item.get("failureCount").n()));
         }
+    if (item.containsKey("nextExecutionTime")) {
+        builder.nextExecutionTime(LocalDateTime.parse(item.get("nextExecutionTime").s(), DATE_FORMATTER));
+    }
+    if (item.containsKey("taskType")) {
+        builder.taskType(item.get("taskType").s());
+    }
 
         // Extract headers
         if (item.containsKey("headers")) {
@@ -242,28 +250,42 @@ public class TaskRepository {
 
         // Extract chains
         if (item.containsKey("chains")) {
-            List<TaskChain> chains = new ArrayList<>();
-            List<AttributeValue> chainsValues = item.get("chains").l();
+        log.warn("chain is there");
+        List<TaskChain> chains = new ArrayList<>();
+        List<AttributeValue> chainsValues = item.get("chains").l();
 
+        if (chainsValues != null && !chainsValues.isEmpty()) {
+            log.warn("Chains found, processing...");  // Log if chains are found
             for (AttributeValue chainValue : chainsValues) {
                 Map<String, AttributeValue> chainMap = chainValue.m();
+                log.warn("Processing chain: " + chainMap);  // Log each chain being processed
 
-                TaskChain chain = TaskChain.builder()
-                        .id(chainMap.get("id").s())
-                        .taskId(chainMap.get("taskId").s())
-                        .statusCode(Integer.parseInt(chainMap.get("statusCode").n()))
-                        .nextTaskId(chainMap.get("nextTaskId").s())
-                        .build();
+                // Check if the required fields are present and not null
+                if (chainMap.containsKey("id") && chainMap.containsKey("taskId") &&
+                        chainMap.containsKey("statusCode") && chainMap.containsKey("nextTaskId")) {
 
-                chains.add(chain);
+                    TaskChain chain = TaskChain.builder()
+                            .id(chainMap.get("id").s()) // Ensure this exists
+                            .taskId(chainMap.get("taskId").s()) // Ensure this exists
+                            .statusCode(Integer.parseInt(chainMap.get("statusCode").n())) // Ensure this exists
+                            .nextTaskId(chainMap.get("nextTaskId").s()) // Ensure this exists
+                            .build();
+
+                    chains.add(chain);
+                } else {
+                    log.warn("Missing required chain field: " + chainMap);
+                }
             }
-
-            builder.chains(chains);
+        } else {
+            log.warn("No chains found or chains list is empty.");
         }
+
+        // Set the chains even if empty
+        builder.chains(chains);
+    }
 
         return builder.build();
     }
-
     private Map<String, Object> convertAttributeMap(Map<String, AttributeValue> attrMap) {
         Map<String, Object> result = new HashMap<>();
         for (Map.Entry<String, AttributeValue> entry : attrMap.entrySet()) {

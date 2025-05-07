@@ -3,15 +3,13 @@ package org.JustRun.TaskManagementService.Service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.JustRun.TaskManagementService.Repository.TaskExecutionRepository;
 import org.JustRun.TaskManagementService.Repository.TaskRepository;
 import org.JustRun.TaskManagementService.dto.TaskRequest;
 import org.JustRun.TaskManagementService.dto.TaskResponse;
 import org.JustRun.TaskManagementService.exceptions.ResourceNotFoundException;
 import org.JustRun.TaskManagementService.exceptions.UnauthorizedException;
-import org.JustRun.TaskManagementService.model.Task;
-import org.JustRun.TaskManagementService.model.TaskChain;
-import org.JustRun.TaskManagementService.model.TaskPriority;
-import org.JustRun.TaskManagementService.model.User;
+import org.JustRun.TaskManagementService.model.*;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.scheduling.support.SimpleTriggerContext;
 import org.springframework.stereotype.Service;
@@ -30,6 +28,7 @@ import java.util.stream.Collectors;
 public class TaskService {
 
     private final TaskRepository taskRepository;
+    private final TaskExecutionRepository taskExecutionRepository;
 //    private final QueueService queueService;
 
     private Task mapRequestToTask(TaskRequest request) {
@@ -139,6 +138,30 @@ public class TaskService {
 
         // Delete the task
         taskRepository.delete(userId,id);
+    }
+
+    public List<TaskResponse.TaskExecutionResponse> getTaskExecutions(String id, String userId) {
+        // Verify user has access to task
+        getTask(id, userId);
+
+        List<TaskExecution> executions = taskExecutionRepository.findByTaskId(id);
+
+        return executions.stream()
+                .map(this::mapToExecutionResponse)
+                .collect(Collectors.toList());
+    }
+
+    private TaskResponse.TaskExecutionResponse mapToExecutionResponse(TaskExecution execution) {
+        return TaskResponse.TaskExecutionResponse.builder()
+                .id(execution.getId())
+                .executionTime(execution.getExecutionTime())
+                .status(execution.getStatus())
+                .statusCode(execution.getStatusCode())
+                .response(execution.getResponse())
+                .error(execution.getError())
+                .retryCount(execution.getRetryCount())
+                .nextRetry(execution.getNextRetry())
+                .build();
     }
 
 }

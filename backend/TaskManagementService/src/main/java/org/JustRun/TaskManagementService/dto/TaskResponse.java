@@ -36,6 +36,8 @@ public class TaskResponse {
     private Integer executionCount;
     private Integer failureCount;
     private List<TaskChainResponse> chains;
+    private LocalDateTime nextExecutionTime;
+    private String taskType;
 
     @Data
     @Builder
@@ -43,7 +45,24 @@ public class TaskResponse {
     @AllArgsConstructor
     public static class TaskChainResponse {
         private String id;
+        private String taskId;
         private Integer statusCode;
         private String nextTaskId;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TaskExecutionResponse {
+        private String id;
+        private LocalDateTime executionTime;
+        private String status;
+        private Integer statusCode;
+        private String response;
+        private String error;
+        private Integer retryCount;
+        private LocalDateTime nextRetry;
+
     }
 }
