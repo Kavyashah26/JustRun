@@ -58,29 +58,55 @@ public class TaskService {
         task.setExecutionCount(0);
         task.setFailureCount(0);
 
-        task.setTaskType("SCHEDULED");
+        task.setTaskType(Task.TaskType.valueOf(request.getTaskType().toUpperCase()));
+        // Enum value: ROOT or CHAINED
 
-        if (task.getCronExpression() != null && !task.getCronExpression().isEmpty()) {
-            CronTrigger cronTrigger = new CronTrigger(task.getCronExpression());
-            LocalDateTime now = LocalDateTime.now();
-            Date currentTime = Date.from(now.atZone(ZoneId.systemDefault()).toInstant());
-            Date nextExecutionDate = cronTrigger.nextExecutionTime(new SimpleTriggerContext(currentTime, null, null));
+        if (task.getTaskType() == Task.TaskType.CHAINED) {
+            task.setCronExpression("");
+//            task.setNextExecutionTime(null);
+        } else if (task.getTaskType() == Task.TaskType.ROOT) {
+            String cron = task.getCronExpression();
+            if (cron != null && !cron.isEmpty()) {
+                CronTrigger cronTrigger = new CronTrigger(cron);
+                LocalDateTime now = LocalDateTime.now();
+                Date currentTime = Date.from(now.atZone(ZoneId.systemDefault()).toInstant());
+                Date nextExecutionDate = cronTrigger.nextExecutionTime(new SimpleTriggerContext(currentTime, null, null));
 
-//            Date nextExecutionDate = cronTrigger.nextExecutionTime(new SimpleTriggerContext());
-            if (nextExecutionDate != null) {
-                LocalDateTime nextExecution = nextExecutionDate.toInstant()
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDateTime();
-                if (now.getSecond() != 0) {
-                    // If the current second isn't 0, adjust nextExecution by adding the seconds
-                    nextExecution = nextExecution.plusSeconds(now.getSecond());
+                if (nextExecutionDate != null) {
+                    LocalDateTime nextExecution = nextExecutionDate.toInstant()
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDateTime();
+                    if (now.getSecond() != 0) {
+                        nextExecution = nextExecution.plusSeconds(now.getSecond());
+                    }
+                    task.setNextExecutionTime(nextExecution);
+                } else {
+                    log.warn("Unable to compute next execution time for task {} with cron expression: {}", task.getId(), cron);
                 }
-
-                task.setNextExecutionTime(nextExecution);
-            } else {
-                log.warn("Unable to compute next execution time for task {} with cron expression: {}", task.getId(), task.getCronExpression());
             }
         }
+
+//        if (task.getCronExpression() != null && !task.getCronExpression().isEmpty()) {
+//            CronTrigger cronTrigger = new CronTrigger(task.getCronExpression());
+//            LocalDateTime now = LocalDateTime.now();
+//            Date currentTime = Date.from(now.atZone(ZoneId.systemDefault()).toInstant());
+//            Date nextExecutionDate = cronTrigger.nextExecutionTime(new SimpleTriggerContext(currentTime, null, null));
+//
+////            Date nextExecutionDate = cronTrigger.nextExecutionTime(new SimpleTriggerContext());
+//            if (nextExecutionDate != null) {
+//                LocalDateTime nextExecution = nextExecutionDate.toInstant()
+//                        .atZone(ZoneId.systemDefault())
+//                        .toLocalDateTime();
+//                if (now.getSecond() != 0) {
+//                    // If the current second isn't 0, adjust nextExecution by adding the seconds
+//                    nextExecution = nextExecution.plusSeconds(now.getSecond());
+//                }
+//
+//                task.setNextExecutionTime(nextExecution);
+//            } else {
+//                log.warn("Unable to compute next execution time for task {} with cron expression: {}", task.getId(), task.getCronExpression());
+//            }
+//        }
 
         // Process chains if present
         if (request.getChains() != null && !request.getChains().isEmpty()) {

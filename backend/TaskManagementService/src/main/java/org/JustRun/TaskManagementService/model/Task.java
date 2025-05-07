@@ -36,5 +36,11 @@ public class Task {
     private Integer executionCount;
     private Integer failureCount;
     private LocalDateTime nextExecutionTime;
-    private String taskType;
+    private TaskType taskType;
+
+    public enum TaskType {
+        ROOT,     // Scheduled by cron
+        CHAINED   // Triggered by another task
+    }
+
 }

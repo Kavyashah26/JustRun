@@ -94,7 +94,7 @@ public class TaskController {
                 .failureCount(task.getFailureCount())
                 .chains(taskChainResponses)
                 .nextExecutionTime(task.getNextExecutionTime())
-                .taskType(task.getTaskType())
+                .taskType(task.getTaskType().name())
 
                 .build();
     }

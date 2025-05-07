@@ -34,7 +34,7 @@ public class TaskRequest {
 
     private Map<String, Object> body;
 
-    @NotBlank(message = "Cron expression is required")
+//    @NotBlank(message = "Cron expression is required")
     private String cronExpression;
 
     @NotNull(message = "Priority is required")
@@ -51,6 +51,10 @@ public class TaskRequest {
 
     @Pattern(regexp = "^https?://.*", message = "Webhook URL must be a valid URL")
     private String webhookUrl;
+
+    @NotNull(message = "Task type is required")
+    @Pattern(regexp = "^(ROOT|CHAINED)$", message = "Task type must be either ROOT or CHAINED")
+    private String taskType; // Added field
 
     @Data
     @NoArgsConstructor

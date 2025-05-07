@@ -54,8 +54,13 @@ public class TaskRepository {
         item.put("nextExecutionTime", AttributeValue.builder().s(nextExecutionTime).build());
 
 
-        String taskType = task.getTaskType() != null ? task.getTaskType() : "SCHEDULED";
-        item.put("taskType", AttributeValue.builder().s(taskType).build());
+        item.put("taskType", AttributeValue.builder().s(
+                task.getTaskType() != null ? task.getTaskType().name() : Task.TaskType.ROOT.name()
+        ).build());
+
+        if (task.getTaskType() == Task.TaskType.ROOT && task.getCronExpression() != null) {
+            item.put("cronExpression", AttributeValue.builder().s(task.getCronExpression()).build());
+        }
 
         if (task.getDescription() != null) {
             item.put("description", AttributeValue.builder().s(task.getDescription()).build());
@@ -236,8 +241,17 @@ public class TaskRepository {
         builder.nextExecutionTime(LocalDateTime.parse(item.get("nextExecutionTime").s(), DATE_FORMATTER));
     }
     if (item.containsKey("taskType")) {
-        builder.taskType(item.get("taskType").s());
+        String taskTypeValue = item.get("taskType").s().toUpperCase();
+        try {
+            builder.taskType(Task.TaskType.valueOf(taskTypeValue));
+        } catch (IllegalArgumentException e) {
+            // Handle invalid enum value (e.g., log or set a default value)
+            log.warn("Invalid task type: {}. Defaulting to ROOT.", taskTypeValue);
+            builder.taskType(Task.TaskType.ROOT); // Or any default value you prefer
+        }
     }
+
+
 
         // Extract headers
         if (item.containsKey("headers")) {
