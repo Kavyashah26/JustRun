@@ -35,4 +35,6 @@ public class Task {
     private LocalDateTime lastExecutedAt;
     private Integer executionCount;
     private Integer failureCount;
+    private LocalDateTime nextExecutionTime;
+    private String taskType;
 }
