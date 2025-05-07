@@ -12,12 +12,16 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.support.CronTrigger;
+import org.springframework.scheduling.support.SimpleTriggerContext;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,107 +35,6 @@ public class TaskExecutionService {
 //    private final WebhookService webhookService;
     private final QueueService queueService;
     private final RestTemplate restTemplate = new RestTemplate();
-
-//    public void executeTask(String taskId) {
-//        Optional<Task> optionalTask = taskRepository.findById(taskId);
-//
-//        if (optionalTask.isEmpty()) {
-//            log.error("Task not found for execution: {}", taskId);
-//            return;
-//        }
-//
-//        Task task = optionalTask.get();
-//        executeTask(task);
-//    }
-
-//    public void executeTask(Task task) {
-//        log.info("Executing task: {}", task.getId());
-//
-//        // Create task execution record
-//        TaskExecution execution = TaskExecution.builder()
-//                .id(UUID.randomUUID().toString())
-//                .taskId(task.getId())
-//                .executionTime(LocalDateTime.now())
-//                .status("RUNNING")
-//                .retryCount(0)
-//                .build();
-//
-//        execution = taskExecutionRepository.save(execution);
-//
-//        try {
-//            // Prepare HTTP request
-//            HttpHeaders headers = new HttpHeaders();
-//            if (task.getHeaders() != null) {
-//                task.getHeaders().forEach(headers::set);
-//            }
-//
-//            HttpEntity<String> requestEntity = new HttpEntity<>(task.getBody(), headers);
-//            HttpMethod method = HttpMethod.valueOf(task.getMethod());
-//
-//            // Execute HTTP request
-//            ResponseEntity<String> response = restTemplate.exchange(
-//                    task.getEndpoint(),
-//                    method,
-//                    requestEntity,
-//                    String.class
-//            );
-//
-//            // Update execution with success
-//            execution.setStatus("COMPLETED");
-//            execution.setStatusCode(response.getStatusCodeValue());
-//            execution.setResponse(response.getBody());
-//            taskExecutionRepository.save(execution);
-//
-//            // Update task stats
-//            updateTaskStats(task, true);
-//
-//            // Process task chaining if applicable
-//            processTaskChain(task, response.getStatusCodeValue());
-//
-//            // Send webhook notification if configured
-//            if (task.getWebhookUrl() != null) {
-//                webhookService.sendSuccessNotification(task, execution);
-//            }
-//
-//        } catch (HttpClientErrorException | HttpServerErrorException ex) {
-//            // Handle HTTP error response
-//            execution.setStatus("FAILED");
-//            execution.setStatusCode(ex.getRawStatusCode());
-//            execution.setError(ex.getResponseBodyAsString());
-//            taskExecutionRepository.save(execution);
-//
-//            // Update task stats
-//            updateTaskStats(task, false);
-//
-//            // Process task chaining for error code if applicable
-//            processTaskChain(task, ex.getRawStatusCode());
-//
-//            // Check if retry is applicable
-//            if (shouldRetry(task, execution)) {
-//                scheduleRetry(task, execution);
-//            } else if (task.getWebhookUrl() != null) {
-//                // Send webhook failure notification
-//                webhookService.sendFailureNotification(task, execution);
-//            }
-//
-//        } catch (Exception ex) {
-//            // Handle unexpected errors
-//            execution.setStatus("FAILED");
-//            execution.setError("Unexpected error: " + ex.getMessage());
-//            taskExecutionRepository.save(execution);
-//
-//            // Update task stats
-//            updateTaskStats(task, false);
-//
-//            // Check if retry is applicable
-//            if (shouldRetry(task, execution)) {
-//                scheduleRetry(task, execution);
-//            } else if (task.getWebhookUrl() != null) {
-//                // Send webhook failure notification
-//                webhookService.sendFailureNotification(task, execution);
-//            }
-//        }
-//    }
 
     public void executeTask(Task task) {
         log.info("=== [START] Executing task: {} ===", task.getId());
@@ -228,6 +131,45 @@ public class TaskExecutionService {
 //                webhookService.sendFailureNotification(task, execution);
 //            }
         }
+        try {
+            String cron = task.getCronExpression();
+            if (cron != null && !cron.isEmpty()) {
+                CronTrigger cronTrigger = new CronTrigger(cron);
+                LocalDateTime baseTime = task.getLastExecutedAt(); // <- Use this
+                LocalDateTime now = LocalDateTime.now();
+
+                if (baseTime == null) {
+                    log.info("📌 First time executing task {}", task.getId());
+                    baseTime = now; // First execution fallback
+                }
+
+                Date baseExecution = Date.from(baseTime.atZone(ZoneId.systemDefault()).toInstant());
+                SimpleTriggerContext triggerContext = new SimpleTriggerContext();
+                triggerContext.update(baseExecution, baseExecution, baseExecution);
+
+                Date nextExecutionDate = cronTrigger.nextExecutionTime(triggerContext);
+
+                if (nextExecutionDate != null) {
+                    LocalDateTime nextExecution = nextExecutionDate.toInstant()
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDateTime();
+
+                    if (now.getSecond() != 0) {
+                        nextExecution = nextExecution.plusSeconds(now.getSecond());
+                    }
+
+                    task.setNextExecutionTime(nextExecution);
+                    log.info("Updating task {} with next execution time: {}", task.getId(), nextExecution);
+                    taskRepository.save(task);
+                } else {
+                    log.warn("Unable to compute next execution time for task {} with cron: {}", task.getId(), cron);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error while calculating next execution time for task {}: {}", task.getId(), e.getMessage(), e);
+        }
+
+
 
         log.info("=== [END] Task execution finished: {} ===", task.getId());
     }
@@ -289,15 +231,22 @@ public class TaskExecutionService {
 
         // Find a chain that matches the status code
         for (TaskChain chain : task.getChains()) {
+            log.debug("😶‍🌫️ Inspecting task chain: {}", chain);
             if (chain.getStatusCode() == statusCode) {
                 String nextTaskId = chain.getNextTaskId();
+                log.info("😶‍🌫️ Matching status code found! Task [{}] chains to [{}] on status code [{}]",
+                        task.getId(), nextTaskId, statusCode);
+
                 log.info("Processing task chain: {} -> {} for status code {}",
                         task.getId(), nextTaskId, statusCode);
 
                 // Find and execute the next task
-                taskRepository.findById(task.getUserId(),nextTaskId).ifPresent(nextTask -> {
-                    // Enqueue the chained task for execution
+                taskRepository.findById(task.getUserId(), nextTaskId).ifPresentOrElse(nextTask -> {
+                    log.info("😶‍🌫️ Found next task [{}] - [{}], enqueuing for execution",
+                            nextTask.getId(), nextTask.getName());
                     queueService.enqueueTask(nextTask);
+                }, () -> {
+                    log.warn("😶‍🌫️ No next task found for id [{}] and user [{}]", nextTaskId, task.getUserId());
                 });
 
                 break; // Process only the first matching chain

@@ -3,6 +3,7 @@ package org.JustRun.TaskExecutionService.Repository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.JustRun.TaskExecutionService.model.Task;
 import org.JustRun.TaskExecutionService.model.TaskChain;
 import org.JustRun.TaskExecutionService.model.TaskPriority;
@@ -17,11 +18,14 @@ import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
+@Slf4j
 public class TaskRepository {
 
     private final DynamoDbClient dynamoDbClient;
     private static final String TABLE_NAME = "tasks";
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+//    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public Task save(Task task) {
@@ -85,7 +89,9 @@ public class TaskRepository {
         if (task.getFailureCount() != null) {
             item.put("failureCount", AttributeValue.builder().n(task.getFailureCount().toString()).build());
         }
-
+        if (task.getNextExecutionTime() != null) {
+            item.put("nextExecutionTime", AttributeValue.builder().s(task.getNextExecutionTime().format(DATE_FORMATTER)).build());
+        }
         // Store headers as JSON
         if (task.getHeaders() != null && !task.getHeaders().isEmpty()) {
             Map<String, AttributeValue> headersMap = new HashMap<>();
@@ -137,8 +143,9 @@ public class TaskRepository {
     }
 
     public Optional<Task> findById(String userId,String id) {
+        log.info("🙋‍♂️ Starting findById operation with userId: {} and id: {}", userId, id);
         Map<String, AttributeValue> key = new HashMap<>();
-        key.put("userId", AttributeValue.builder().s(userId).build());
+//        key.put("userId", AttributeValue.builder().s(userId).build());
         key.put("id", AttributeValue.builder().s(id).build());
 
         GetItemRequest request = GetItemRequest.builder()
@@ -147,8 +154,11 @@ public class TaskRepository {
                 .build();
 
         GetItemResponse response = dynamoDbClient.getItem(request);
+        log.info("🙋‍♂️ Received GetItemResponse with status: {}, hasItem: {}",
+                response.sdkHttpResponse().statusCode(), response.hasItem());
 
         if (!response.hasItem()) {
+            log.warn("🙋‍♂️ No item found in DynamoDB for id: {}", id);
             return Optional.empty();
         }
 
