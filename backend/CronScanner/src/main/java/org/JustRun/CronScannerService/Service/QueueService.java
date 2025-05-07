@@ -39,11 +39,13 @@ public class QueueService {
 
             String messageBody = objectMapper.writeValueAsString(task);
             log.debug("Serialized task to JSON: {}", messageBody);
+            String deduplicationId = task.getId() + "-" + System.currentTimeMillis();
 
             SendMessageRequest sendMessageRequest = SendMessageRequest.builder()
                     .queueUrl(queueUrl)
                     .messageBody(messageBody)
                     .messageGroupId(task.getId())
+                    .messageDeduplicationId(deduplicationId)
                     .build();
 
             SendMessageResponse response = sqsClient.sendMessage(sendMessageRequest);
