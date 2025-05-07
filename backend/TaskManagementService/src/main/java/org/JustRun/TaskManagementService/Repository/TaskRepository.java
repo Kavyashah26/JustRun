@@ -245,7 +245,6 @@ public class TaskRepository {
         try {
             builder.taskType(Task.TaskType.valueOf(taskTypeValue));
         } catch (IllegalArgumentException e) {
-            // Handle invalid enum value (e.g., log or set a default value)
             log.warn("Invalid task type: {}. Defaulting to ROOT.", taskTypeValue);
             builder.taskType(Task.TaskType.ROOT); // Or any default value you prefer
         }

@@ -86,28 +86,6 @@ public class TaskService {
             }
         }
 
-//        if (task.getCronExpression() != null && !task.getCronExpression().isEmpty()) {
-//            CronTrigger cronTrigger = new CronTrigger(task.getCronExpression());
-//            LocalDateTime now = LocalDateTime.now();
-//            Date currentTime = Date.from(now.atZone(ZoneId.systemDefault()).toInstant());
-//            Date nextExecutionDate = cronTrigger.nextExecutionTime(new SimpleTriggerContext(currentTime, null, null));
-//
-////            Date nextExecutionDate = cronTrigger.nextExecutionTime(new SimpleTriggerContext());
-//            if (nextExecutionDate != null) {
-//                LocalDateTime nextExecution = nextExecutionDate.toInstant()
-//                        .atZone(ZoneId.systemDefault())
-//                        .toLocalDateTime();
-//                if (now.getSecond() != 0) {
-//                    // If the current second isn't 0, adjust nextExecution by adding the seconds
-//                    nextExecution = nextExecution.plusSeconds(now.getSecond());
-//                }
-//
-//                task.setNextExecutionTime(nextExecution);
-//            } else {
-//                log.warn("Unable to compute next execution time for task {} with cron expression: {}", task.getId(), task.getCronExpression());
-//            }
-//        }
-
         // Process chains if present
         if (request.getChains() != null && !request.getChains().isEmpty()) {
             List<TaskChain> chains = new ArrayList<>();
