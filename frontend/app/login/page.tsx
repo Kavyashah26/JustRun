@@ -11,13 +11,11 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircleIcon } from "lucide-react"
 import { login } from "@/lib/auth-service"
-// import { login } from "@/lib/auth-service"
-
 
 export default function LoginPage() {
   const router = useRouter()
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
+  const [username, setUsername] = useState("Kavya")
+  const [password, setPassword] = useState("123456")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -28,7 +26,7 @@ export default function LoginPage() {
 
     try {
       await login(username, password)
-      router.push("/abc")
+      router.push("/tasks")
     } catch (err) {
       setError(typeof err === "string" ? err : "Failed to login. Please check your credentials.")
     } finally {
@@ -41,7 +39,9 @@ export default function LoginPage() {
       <Card className="mx-auto w-full max-w-sm">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Just Run</CardTitle>
-          <CardDescription className="text-center">Enter your credentials to sign in</CardDescription>
+          <CardDescription className="text-center">
+            Credentials pre-populated from Ignosis demo
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
