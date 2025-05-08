@@ -1,23 +1,22 @@
 import { NextResponse } from "next/server"
 import { getServerAuthToken } from "@/lib/auth-utils.server"
+import type { NextRequest } from "next/server"
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   const token = await getServerAuthToken()
 
   if (!token) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 })
   }
-
-  const { id } = await params
-
-  const { searchParams } = new URL(request.url)
-  const page = searchParams.get("page") || "1"
-  const limit = searchParams.get("limit") || "10"
+  const { id } = context.params
 
   try {
     const TASK_SERVICE_URL = process.env.TASK_MANAGEMENT_SERVICE_URL || "http://localhost:8081"
 
-    const response = await fetch(`${TASK_SERVICE_URL}/api/tasks/`, {
+    const response = await fetch(`${TASK_SERVICE_URL}/api/tasks/${id}/executions`, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
