@@ -19,7 +19,8 @@ public class TaskExecutionRepository {
 
     private final DynamoDbClient dynamoDbClient;
     private static final String TABLE_NAME = "task_executions";
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+//    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     public TaskExecution save(TaskExecution execution) {
         if (execution.getId() == null) {
@@ -61,52 +62,25 @@ public class TaskExecutionRepository {
         return execution;
     }
 
-//    public List<TaskExecution> findByTaskId(String taskId) {
-//        Map<String, AttributeValue> expressionValues = new HashMap<>();
-//        expressionValues.put(":taskId", AttributeValue.builder().s(taskId).build());
-//
-//        QueryRequest request = QueryRequest.builder()
-//                .tableName(TABLE_NAME)
-//                .keyConditionExpression("id = :id")
-    ////                .expressionAttributeValues(expressionValues)
-//                .expressionAttributeValues(Map.of(":id", AttributeValue.builder().s(taskId).build()))
-//                .build();
-//
-//        QueryResponse response = dynamoDbClient.query(request);
-//
-//        return response.items().stream()
-//                .map(this::mapToTaskExecution)
-//                .collect(Collectors.toList());
-//    }
     public List<TaskExecution> findByTaskId(String taskId) {
+        Map<String, String> expressionAttributeNames = new HashMap<>();
+        expressionAttributeNames.put("#taskId", "taskId");
+
         Map<String, AttributeValue> expressionValues = new HashMap<>();
         expressionValues.put(":taskId", AttributeValue.builder().s(taskId).build());
 
-//    QueryRequest request = QueryRequest.builder()
-//            .tableName(TABLE_NAME)
-//            .indexName("taskId-index")  // GSI name
-//            .keyConditionExpression("taskId = :taskId")
-//            .expressionAttributeValues(expressionValues)
-//            .build();
-
-//        QueryRequest request = QueryRequest.builder()
-//                .tableName(TABLE_NAME)
-//                .indexName("taskId-index")
-//                .keyConditionExpression("taskId = :taskId")
-////                .expressionAttributeValues(Map.of(":taskId", AttributeValue.builder().s(taskId).build()))
-//                .expressionAttributeValues(expressionValues)
-//                .build();
-
         QueryRequest request = QueryRequest.builder()
-                .tableName(TABLE_NAME)
-                .indexName("taskId-index") // Correct GSI name
-                .keyConditionExpression("taskId = :taskId") // Partition key condition
-                .expressionAttributeValues(expressionValues) // Mapping of :taskId
+                .tableName("task_executions")
+                .indexName("taskId-executionTime-index")
+                .keyConditionExpression("taskId = :taskId")
+                .expressionAttributeValues(Map.of(
+                        ":taskId", AttributeValue.builder().s(taskId).build()
+                ))
                 .build();
 
 
-
         QueryResponse response = dynamoDbClient.query(request);
+
 
         return response.items().stream()
                 .map(this::mapToTaskExecution)

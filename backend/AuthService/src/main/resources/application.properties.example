@@ -18,3 +18,5 @@ logging.level.org.springframework.security=INFO
 
 spring.security.user.name=
 spring.security.user.password=
+posthog.api.key=
+posthog.api.url=

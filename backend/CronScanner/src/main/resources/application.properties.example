@@ -17,3 +17,6 @@ logging.level.org.springframework.security=INFO
 aws.sqs.high-priority-queue=
 aws.sqs.normal-priority-queue=
 aws.sqs.low-priority-queue=
+
+posthog.api.key=
+posthog.api.url=

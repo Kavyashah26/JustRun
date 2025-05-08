@@ -8,9 +8,9 @@ import org.JustRun.CronScannerService.Model.TaskPriority;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Repository;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
-import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
+import software.amazon.awssdk.services.dynamodb.model.*;
+
+import org.springframework.scheduling.support.SimpleTriggerContext;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -223,6 +223,68 @@ public class TaskRepository {
         }
         return result;
     }
+    public boolean claimDueTask(Task task, LocalDateTime expectedNextExecutionTime) {
+        try {
+            String cron = task.getCronExpression();
+            if (cron == null || cron.isEmpty()) {
+                log.warn("Task {} has no cron expression.", task.getId());
+                return false;
+            }
+
+            LocalDateTime baseTime = task.getLastExecutedAt() != null
+                    ? task.getLastExecutedAt()
+                    : LocalDateTime.now();
+
+            CronTrigger cronTrigger = new CronTrigger(cron);
+            Date baseExecution = Date.from(baseTime.atZone(ZoneId.systemDefault()).toInstant());
+
+            SimpleTriggerContext triggerContext = new SimpleTriggerContext();
+            triggerContext.update(baseExecution, baseExecution, baseExecution);
+            Date nextExecutionDate = cronTrigger.nextExecutionTime(triggerContext);
+
+            if (nextExecutionDate == null) {
+                log.warn("Failed to compute nextExecutionTime for task {}", task.getId());
+                return false;
+            }
+
+            LocalDateTime newNextExecutionTime = nextExecutionDate.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDateTime();
+
+            Map<String, AttributeValue> key = Map.of(
+                    "id", AttributeValue.builder().s(task.getId()).build()
+            );
+
+            Map<String, AttributeValue> expressionValues = new HashMap<>();
+            expressionValues.put(":newTime", AttributeValue.builder().s(newNextExecutionTime.format(DATE_FORMATTER)).build());
+            expressionValues.put(":lastExecutedAt", AttributeValue.builder().s(LocalDateTime.now().format(DATE_FORMATTER)).build());
+
+            UpdateItemRequest.Builder updateBuilder = UpdateItemRequest.builder()
+                    .tableName(TABLE_NAME)
+                    .key(key)
+                    .updateExpression("SET nextExecutionTime = :newTime, lastExecutedAt = :lastExecutedAt");
+
+            if (expectedNextExecutionTime != null) {
+                expressionValues.put(":expectedTime", AttributeValue.builder().s(expectedNextExecutionTime.format(DATE_FORMATTER)).build());
+                updateBuilder.conditionExpression("nextExecutionTime = :expectedTime");
+            } else {
+                // First time, task has no nextExecutionTime set
+                updateBuilder.conditionExpression("attribute_not_exists(nextExecutionTime)");
+            }
+
+            updateBuilder.expressionAttributeValues(expressionValues);
+            dynamoDbClient.updateItem(updateBuilder.build());
+
+            log.info("Claimed task {}. Updated nextExecutionTime to {}", task.getId(), newNextExecutionTime);
+            return true;
+
+        } catch (ConditionalCheckFailedException e) {
+            log.info("Task {} already claimed by another instance.", task.getId());
+            return false;
+        }
+    }
+
+
 
 
 }

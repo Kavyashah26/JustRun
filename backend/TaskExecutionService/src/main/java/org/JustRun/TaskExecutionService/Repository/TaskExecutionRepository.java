@@ -21,7 +21,7 @@ public class TaskExecutionRepository {
 
     private final DynamoDbClient dynamoDbClient;
     private static final String TABLE_NAME = "task_executions";
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     public TaskExecution save(TaskExecution execution) {
         if (execution.getId() == null) {

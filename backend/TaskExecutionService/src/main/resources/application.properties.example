@@ -1,0 +1,25 @@
+
+# Server Configuration
+server.port=8082
+
+# AWS Configuration
+aws.accessKey=
+aws.secretKey=
+aws.region=
+
+# Logging Configuration
+logging.level.root=INFO
+logging.level.com.taskexecutor=DEBUG
+logging.level.org.springframework.web=INFO
+logging.level.org.springframework.security=INFO
+
+# JWT Configuration
+jwt.secret=
+jwt.expiration=
+
+# AWS SQS Configuration
+aws.sqs.high-priority-queue=
+aws.sqs.normal-priority-queue=
+
+posthog.api.key=
+posthog.api.url=

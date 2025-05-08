@@ -240,15 +240,28 @@ public class TaskRepository {
     if (item.containsKey("nextExecutionTime")) {
         builder.nextExecutionTime(LocalDateTime.parse(item.get("nextExecutionTime").s(), DATE_FORMATTER));
     }
-    if (item.containsKey("taskType")) {
-        String taskTypeValue = item.get("taskType").s().toUpperCase();
-        try {
-            builder.taskType(Task.TaskType.valueOf(taskTypeValue));
-        } catch (IllegalArgumentException e) {
-            log.warn("Invalid task type: {}. Defaulting to ROOT.", taskTypeValue);
-            builder.taskType(Task.TaskType.ROOT); // Or any default value you prefer
+//    if (item.containsKey("taskType")) {
+//        String taskTypeValue = item.get("taskType").s().toUpperCase();
+//        try {
+//            builder.taskType(Task.TaskType.valueOf(taskTypeValue));
+//        } catch (IllegalArgumentException e) {
+//            log.warn("Invalid task type: {}. Defaulting to ROOT.", taskTypeValue);
+//            builder.taskType(Task.TaskType.ROOT); // Or any default value you prefer
+//        }
+//    }
+        if (item.containsKey("taskType") && item.get("taskType").s() != null) {
+            String taskTypeValue = item.get("taskType").s().toUpperCase();
+            try {
+                builder.taskType(Task.TaskType.valueOf(taskTypeValue));
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid task type: {}. Defaulting to ROOT.", taskTypeValue);
+                builder.taskType(Task.TaskType.ROOT);
+            }
+        } else {
+            log.warn("Missing taskType for task ID: {}", item.get("id").s());
+            builder.taskType(Task.TaskType.ROOT);  // or any safe default
         }
-    }
+
 
 
 

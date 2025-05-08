@@ -3,6 +3,7 @@ package org.JustRun.TaskManagementService.Controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.JustRun.TaskManagementService.Service.PostHogService;
 import org.JustRun.TaskManagementService.Service.TaskService;
 import org.JustRun.TaskManagementService.dto.TaskRequest;
 import org.JustRun.TaskManagementService.dto.TaskResponse;
@@ -14,7 +15,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -22,12 +25,22 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TaskController {
     private final TaskService taskService;
-
+    private final PostHogService postHogService;
     @PostMapping
     public ResponseEntity<TaskResponse> createTask(
             @Valid @RequestBody TaskRequest request,
             @AuthenticationPrincipal User user) {
         Task task = taskService.createTask(request, user);
+        Map<String, Object> props = new HashMap<>();
+        props.put("taskId", task.getId());
+        props.put("userId", user.getId());
+        props.put("taskName", task.getName());
+        props.put("priority", task.getPriority().name());
+        props.put("cron", task.getCronExpression());
+
+        postHogService.trackEvent(user.getId(), "task_created", props);
+        System.out.println("[Analytics] Event 'task_created' sent to PostHog successfully.");
+
         return ResponseEntity.ok(mapToTaskResponse(task));
     }
 
@@ -71,6 +84,7 @@ public class TaskController {
                 .map(this::mapToTaskChainResponse)  // Map each TaskChain to TaskChainResponse
                 .collect(Collectors.toList())
                 : Collections.emptyList();  // Return an empty list if chains is null
+        System.out.println("Task ID: " + task.getId() + ", TaskType: " + task.getTaskType());
 
         return TaskResponse.builder()
                 .id(task.getId())
