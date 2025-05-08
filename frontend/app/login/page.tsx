@@ -28,7 +28,7 @@ export default function LoginPage() {
 
     try {
       await login(username, password)
-      router.push("/dashboard")
+      router.push("/abc")
     } catch (err) {
       setError(typeof err === "string" ? err : "Failed to login. Please check your credentials.")
     } finally {
